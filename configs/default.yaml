@@ -1,0 +1,5 @@
+data_path: "data/raw"
+chunk_size: 400
+chunk_overlap: 50
+embedding_model: "all-MiniLM-L6-v2"
+db_path: "data/chroma"

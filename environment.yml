@@ -1,0 +1,16 @@
+name: genbench
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - jupyterlab
+      - langchain
+      - chromadb
+      - sentence-transformers
+      - tiktoken
+      - matplotlib
+      - seaborn
+      - pyyaml
+      - python-dotenv
