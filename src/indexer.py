@@ -3,8 +3,8 @@ from typing import List, Dict
 from sentence_transformers import SentenceTransformer
 import chromadb
 from chromadb.utils import embedding_functions
-from langchain.vectorstores import Chroma as LCChroma
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma as LCChroma
 
 def embed_and_index(
     chunks: List[Dict[str, str]],
@@ -31,7 +31,6 @@ def embed_and_index(
     metadatas = [{"parent_id": c["parent_id"]} for c in chunks]
 
     collection.add(ids=ids, documents=texts, metadatas=metadatas)
-    collection.persist()
 
     # LangChain wrapper (for retrieval API)
     lc_embeddings = HuggingFaceEmbeddings(model_name=model_name)
