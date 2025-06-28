@@ -10,12 +10,12 @@ def embed_and_index(
     chunks: List[Dict[str, str]],
     collection_name: str = "ag_miniLM",
     persist_path: str = "data/chroma",
+    model_name: str = "all-MiniLM-L6-v2",
 ):
     """
     Embed chunk texts with MiniLM, write to a Chroma collection,
     and return a LangChain-wrapped retriever.
     """
-    model_name = "all-MiniLM-L6-v2"
     sbert_model = SentenceTransformer(model_name, device="cpu")
     ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=model_name)
 
