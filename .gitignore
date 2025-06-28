@@ -4,7 +4,8 @@
 __pycache__/
 # Jupyter checkpoints
 .ipynb_checkpoints/
-# chroma
-data/chroma
+# chroma and raw
+data/chroma/
+data/raw/
 # OS cruft
 .DS_Store
