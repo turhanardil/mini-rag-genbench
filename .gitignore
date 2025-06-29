@@ -9,3 +9,4 @@ data/chroma/
 data/raw/
 # OS cruft
 .DS_Store
+data/chroma_grid/
