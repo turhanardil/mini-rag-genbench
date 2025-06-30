@@ -7,7 +7,7 @@ This repo walks through a slimmed-down version of Chroma’s generative-benchmar
 
 ## Why AG News & Mini-Benchmark?
 
-- **Dataset choice:** AG News is a clean, well-structured news-article corpus with distinct, self-contained snippets. Its clarity and size (we sample 500 articles) make it ideal for a quick, repeatable proof-of-concept benchmark.  
+- **Dataset choice:** AG News is a clean, well-structured news-article corpus with distinct, self-contained snippets. Its clarity and size (we sample 500 articles) make it ideal for a quick, repeatable proof-of-concept benchmark.
 - **Free tooling:** We use open-source models (Sentence-Transformers and Hugging Face) and a local Chroma store—no API costs or gated dependencies.
 - **Tweak rationale:** We begin with a general-purpose similarity model (`all-MiniLM-L6-v2`) for baseline retrieval, then swap in a QA-tuned model (`multi-qa-MiniLM-L6-dot-v1`) to see how a targeted embedding objective affects recall.
 
@@ -24,7 +24,7 @@ This repo walks through a slimmed-down version of Chroma’s generative-benchmar
 | **5 Embedding-Model Swap**         | done   | Retrained with `multi-qa-MiniLM-L6-dot-v1` → `figures/recall_comparison_embedding.png` |
 | **6 Matrix benchmark**             | done   | Recall@1,3,5 over 6 embed/chunk combos → `figures/recall_matrix_*_*.png` |
 
-All pipeline steps live in `notebooks/01_end_to_end.ipynb`.
+All pipeline steps live in `01_end_to_end.ipynb`.
 
 ---
 
