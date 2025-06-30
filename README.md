@@ -262,9 +262,9 @@ The notebook will detect cached files and skip regeneration steps automatically.
 
 ### Expected Runtime
 
-- **First run**: ~15-20 minutes (includes query generation)
-- **Subsequent runs**: ~5-10 minutes (uses cached queries)
-- **Matrix benchmark**: Additional ~15 minutes (due to 2773 chunk configuration)
+- **First run**: ~10 minutes (includes query generation)
+- **Subsequent runs**: ~2-3 minutes (uses cached queries)
+- **Matrix benchmark**: Additional ~2-3 minutes (due to 2773 chunk configuration)
 
 ## Key Findings and Strategic Insights
 
