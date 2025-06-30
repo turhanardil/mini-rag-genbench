@@ -50,6 +50,8 @@ Our baseline system uses `all-MiniLM-L6-v2` embeddings with 400-token chunks and
 
 ![Baseline Recall](figures/recall_baseline_zoom.png)
 
+The zoomed view above highlights the excellent baseline performance. The y-axis is scaled to the 0.88-1.0 range to better show the differences between recall levels.
+
 | k | Recall |
 |---|--------|
 | 1 | 0.920  |
@@ -69,6 +71,8 @@ We tested the impact of switching from a general-purpose embedding model to one 
 
 ![Embedding Model Comparison](figures/recall_comparison_embedding.png)
 
+The side-by-side comparison reveals a surprising result: the general-purpose model significantly outperforms the QA-specialized model across all k values.
+
 | k | all-MiniLM-L6-v2 | multi-qa-MiniLM |
 |---|------------------|-----------------|
 | 1 | 0.920           | 0.699           |
@@ -85,9 +89,9 @@ Counter to expectations, the QA-optimized model performed significantly worse. S
 
 This demonstrates the value of empirical testing rather than relying on model names or descriptions.
 
-## Matrix Benchmark: Comprehensive Component Testing
+## Comprehensive Matrix Benchmark
 
-To understand the interaction between embedding models and chunking strategies, we conducted a full matrix evaluation.
+To understand the interaction between embedding models and chunking strategies, we conducted a full matrix evaluation across all combinations.
 
 ### Experimental Design
 
@@ -96,38 +100,116 @@ To understand the interaction between embedding models and chunking strategies, 
 - `multi-qa-MiniLM-L6-dot-v1` (QA-optimized)
 
 **Chunking Configurations**:
-- 400/50 (chunk_size/overlap) - our baseline
-- 200/100 - smaller chunks with higher overlap
-- 100/25 - very small chunks with minimal overlap
+- **400/50** (chunk_size/overlap) → **549 chunks** - our baseline
+- **800/400** (larger chunks, high overlap) → **501 chunks** - fewer, larger chunks
+- **64/16** (very small chunks, minimal overlap) → **2773 chunks** - many small chunks
 
-### Matrix Results
+### Complete Results Matrix
 
-| Model | Chunk Config | Recall@1 | Recall@3 | Recall@5 |
-|-------|--------------|----------|----------|----------|
-| **all-MiniLM-L6-v2** | 400/50 | 0.920 | 0.985 | 0.993 |
-| **all-MiniLM-L6-v2** | 200/100 | 0.922 | 0.976 | 0.991 |
-| **all-MiniLM-L6-v2** | 100/25 | 0.916 | 0.974 | 0.982 |
-| **multi-qa-MiniLM** | 400/50 | 0.701 | 0.805 | 0.829 |
-| **multi-qa-MiniLM** | 200/100 | 0.820 | 0.882 | 0.894 |
-| **multi-qa-MiniLM** | 100/25 | 0.869 | 0.929 | 0.938 |
+| Model | Chunk Config | Chunks | Recall@1 | Recall@3 | Recall@5 |
+|-------|--------------|--------|----------|----------|----------|
+| **all-MiniLM-L6-v2** | 400/50 | 549 | 0.920 | 0.985 | 0.993 |
+| **all-MiniLM-L6-v2** | 800/400 | 501 | 0.898 | 0.973 | 0.978 |
+| **all-MiniLM-L6-v2** | 64/16 | 2773 | 0.902 | 0.978 | 0.985 |
+| **multi-qa-MiniLM** | 400/50 | 549 | 0.703 | 0.807 | 0.831 |
+| **multi-qa-MiniLM** | 800/400 | 501 | 0.694 | 0.780 | 0.798 |
+| **multi-qa-MiniLM** | 64/16 | 2773 | 0.874 | 0.940 | 0.953 |
 
-### Visualization: Recall@3 Analysis
+## Detailed Analysis by Recall Level
+
+### Recall@1 Performance
+
+![Heatmap Recall@1](figures/recall_matrix_k1_heatmap.png)
+
+![Recall@1 by Embedding & Chunking](figures/recall_matrix_k1_barchart.png)
+
+At k=1, we're measuring precision: how often the exact correct document is the top result. The patterns reveal fundamentally different chunking preferences:
+
+**all-MiniLM-L6-v2** shows a clear optimum at 400/50 chunks, with performance degrading in both directions:
+- **800/400**: 0.920 → 0.898 (-2.2 percentage points)
+- **64/16**: 0.920 → 0.902 (-1.8 percentage points)
+
+**multi-qa-MiniLM** shows the opposite behavior, strongly preferring smaller chunks:
+- **800/400**: 0.703 → 0.694 (-0.9 percentage points) 
+- **64/16**: 0.703 → 0.874 (+17.1 percentage points!)
+
+### Recall@3 Performance
 
 ![Heatmap Recall@3](figures/recall_matrix_k3_heatmap.png)
 
 ![Recall@3 by Embedding & Chunking](figures/recall_matrix_k3_barchart.png)
 
-### Key Insights
+At k=3, the patterns persist but become less dramatic. The QA model's improvement with smaller chunks remains substantial:
 
-**Embedding-Chunk Interaction**: The two models respond differently to chunking strategies:
+**all-MiniLM-L6-v2** maintains its preference for the medium chunk size:
+- Best: 400/50 (0.985)
+- Worst: 800/400 (0.973)
 
-- **all-MiniLM-L6-v2**: Performs consistently across chunk sizes, with slight preference for medium chunks (400/50)
-- **multi-qa-MiniLM**: Shows clear improvement with smaller chunks, suggesting its QA training benefits from more focused content
+**multi-qa-MiniLM** continues improving with smaller chunks:
+- 800/400: 0.780
+- 400/50: 0.807 
+- 64/16: 0.940 (best performance)
 
-**Practical Implications**:
-1. **Storage vs Performance Trade-off**: Smaller chunks mean more vectors to store and search, increasing computational costs
-2. **Model-Specific Optimization**: The best chunking strategy depends heavily on your chosen embedding model
-3. **Context Preservation**: Very small chunks (100/25) may lose important context despite improving recall for some models
+### Recall@5 Performance
+
+![Heatmap Recall@5](figures/recall_matrix_k5_heatmap.png)
+
+![Recall@5 by Embedding & Chunking](figures/recall_matrix_k5_barchart.png)
+
+At k=5, the most forgiving metric, both models show their characteristic patterns but with reduced magnitude. Even here, chunking strategy significantly impacts the QA model performance.
+
+## Deep Analysis: Why Chunking Strategies Affect Models Differently
+
+### The "Sweet Spot" Phenomenon for all-MiniLM-L6-v2
+
+The general-purpose model exhibits a clear performance peak at 400/50 chunks, suggesting this configuration hits an optimal balance:
+
+**Why 400/50 works best:**
+1. **Context preservation**: 400 tokens provide sufficient context for the model to understand semantic meaning
+2. **Specificity balance**: Not so large that chunks become unfocused, not so small that they lose coherence
+3. **Training alignment**: The model was likely trained on text segments of similar length during its development
+
+**Why larger chunks (800/400) hurt performance:**
+- **Diluted relevance**: Larger chunks may contain multiple topics, making it harder to match specific queries
+- **Noise introduction**: More text means more potential for irrelevant content to interfere with similarity matching
+- **Vector representation challenges**: Longer text may result in less precise embeddings
+
+**Why smaller chunks (64/16) also hurt performance:**
+- **Context loss**: Very small chunks lose critical context that helps with semantic understanding
+- **Fragmentation**: Important concepts may be split across multiple chunks
+- **Increased noise**: With 2773 chunks vs 549, there's more potential for false positive matches
+
+### The Scale-Sensitive QA Model: multi-qa-MiniLM-L6-dot-v1
+
+The QA-optimized model shows dramatically different behavior, with a strong preference for smaller, more focused chunks:
+
+**Why 64/16 works much better (+17.1% recall@1):**
+1. **Question-answer training bias**: QA models are typically trained on focused question-answer pairs with specific, targeted content
+2. **Precision over context**: The model prioritizes exact matches over broad semantic understanding
+3. **Reduced interference**: Smaller chunks eliminate extraneous information that might confuse QA-specific embeddings
+
+**Why this model struggles with larger chunks:**
+- **Training mismatch**: QA datasets typically don't include long, multi-topic passages
+- **Focus dilution**: The model's specialization works against it when chunks contain multiple concepts
+- **Dot product optimization**: The model uses dot product similarity, which may be more sensitive to content focus
+
+### Computational Trade-offs and Production Implications
+
+The results reveal important production considerations:
+
+**Storage and Search Overhead:**
+- 64/16 chunks: **2773 vectors** (5x more storage and search time)
+- 400/50 chunks: **549 vectors** (baseline)
+- 800/400 chunks: **501 vectors** (minimal savings)
+
+**Performance vs Cost Analysis:**
+- **all-MiniLM-L6-v2**: Best performance with moderate computational cost (549 chunks)
+- **multi-qa-MiniLM**: Best performance requires 5x computational overhead (2773 chunks)
+
+**Real-world implications:**
+- For the general model, the optimal configuration is also the most cost-effective
+- For the QA model, achieving good performance requires significant infrastructure investment
+- The choice between models should factor in both accuracy and operational costs
 
 ## Technical Implementation
 
@@ -136,7 +218,7 @@ To understand the interaction between embedding models and chunking strategies, 
 The system consists of three main components:
 
 1. **Document Processing** (`src/chunker.py`): Handles text splitting using LangChain's RecursiveCharacterTextSplitter
-2. **Indexing** (`src/indexer.py`): Manages embedding generation and Chroma vector database operations  
+2. **Indexing** (`src/indexer.py`): Manages embedding generation and Chroma vector database operations
 3. **Evaluation Pipeline** (`01_end_to_end.ipynb`): Orchestrates the full benchmark workflow
 
 ### Key Dependencies
@@ -152,7 +234,7 @@ The system consists of three main components:
 ### Setup Environment
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/turhanardil/mini-rag-genbench.git #https
 cd generative-benchmark
 
 # Create conda environment
@@ -180,38 +262,81 @@ The notebook will detect cached files and skip regeneration steps automatically.
 
 ### Expected Runtime
 
-- **First run**: ~10-15 (includes query generation)
-- **Subsequent runs**: ~2-3 minutes (uses cached queries)
-- **Matrix benchmark**: Additional ~2 minutes
+- **First run**: ~15-20 minutes (includes query generation)
+- **Subsequent runs**: ~5-10 minutes (uses cached queries)
+- **Matrix benchmark**: Additional ~15 minutes (due to 2773 chunk configuration)
 
-## Key Findings and Recommendations
+## Key Findings and Strategic Insights
 
-### Primary Insights
+### Primary Discoveries
 
-1. **Model Selection Matters More Than Expected**: The choice of embedding model had a dramatic impact, with our "general purpose" model significantly outperforming the "QA-optimized" alternative
-2. **Chunking Strategy is Model-Dependent**: Optimal chunk sizes vary by embedding model, emphasizing the need for systematic testing
-3. **Diminishing Returns**: The difference between recall@3 and recall@5 is minimal, suggesting k=3 provides most of the benefit
+1. **Embedding Models Have Distinct Chunking Preferences**: The choice of embedding model fundamentally determines the optimal chunking strategy. This interaction effect is stronger than either component's individual impact.
 
-### Practical Applications
+2. **"General Purpose" Can Outperform "Specialized"**: Despite being designed for QA tasks, the specialized model performed significantly worse at our news article retrieval task, highlighting the importance of domain and task alignment over marketing claims.
 
-For production RAG systems:
-- **Always benchmark empirically** rather than relying on model marketing claims
-- **Test multiple configurations** even when one seems obviously better
-- **Consider computational costs** when choosing between chunk sizes
-- **Use generative benchmarking** to validate improvements on your specific use case
+3. **Sweet Spot vs Scale Sensitivity**: Different models exhibit fundamentally different relationships with chunk size:
+   - **all-MiniLM-L6-v2**: Has a clear optimum (sweet spot behavior)
+   - **multi-qa-MiniLM**: Shows monotonic improvement with smaller chunks (scale sensitive behavior)
 
-### Future Extensions
+4. **Computational Costs Scale Non-linearly**: The QA model's best performance requires 5x more vectors, dramatically increasing storage and search costs.
 
-This framework could be extended with:
-- **Reranking models** for improved precision
-- **Different similarity metrics** beyond cosine similarity  
-- **Question type analysis** to understand what types of queries perform better
-- **Larger scale testing** with more diverse document types
+### Production Decision Framework
+
+Based on these findings, production RAG systems should consider:
+
+**For Budget-Conscious Deployments:**
+- Use all-MiniLM-L6-v2 with 400/50 chunking
+- Achieves 92% recall@1 with moderate computational overhead
+- Provides excellent cost-performance ratio
+
+**For Performance-Critical Applications:**
+- Consider the computational trade-offs carefully
+- multi-qa-MiniLM with 64/16 chunking reaches 87.4% recall@1 but at 5x the infrastructure cost
+- Still underperforms the general model despite optimization efforts
+
+**For Systematic Optimization:**
+- Always test component interactions, not just individual components
+- Budget for comprehensive benchmarking before production deployment
+- Consider operational costs alongside accuracy metrics
+
+### Methodology Validation and Broader Implications
+
+This project successfully demonstrates several critical principles:
+
+1. **Empirical Testing Beats Intuition**: The "obvious" choice (QA-optimized model) performed worse, validating the need for systematic evaluation
+
+2. **Component Interactions Matter**: The embedding model choice affects optimal chunking strategy, showing that RAG components cannot be optimized in isolation
+
+3. **Domain-Specific Benchmarking Is Essential**: Standard benchmarks would not have revealed these specific interaction patterns with news article data
+
+4. **Generative Benchmarking Scales**: The synthetic query approach successfully created a relevant evaluation dataset that revealed meaningful performance differences
+
+## Future Extensions
+
+This framework provides a foundation for several advanced analyses:
+
+**Technical Extensions:**
+- **Reranking models** to improve precision after initial retrieval
+- **Hybrid chunking strategies** that adapt chunk size based on content type
+- **Query type analysis** to understand which question categories perform better with each configuration
+- **Cross-domain validation** with different document types (technical docs, academic papers, etc.)
+
+**Operational Extensions:**
+- **Cost-performance optimization** incorporating actual infrastructure costs
+- **Latency analysis** measuring search speed across different chunk quantities
+- **Memory usage profiling** for edge deployment scenarios
+
+**Research Directions:**
+- **Chunk boundary optimization** using semantic segmentation
+- **Dynamic chunk sizing** based on content complexity
+- **Multi-model ensemble approaches** combining different embedding strategies
 
 ## Conclusion
 
-This project demonstrates the power of generative benchmarking for making data-driven decisions about RAG pipeline components. By creating synthetic test sets from our own data, we uncovered surprising results that challenge conventional assumptions about "better" models.
+This project demonstrates the critical importance of systematic, empirical evaluation in RAG system development. By implementing the generative benchmarking methodology on AG News data, we uncovered several non-intuitive findings that challenge common assumptions about embedding model selection and chunking strategies.
 
-The methodology provides a reproducible framework for evaluating any RAG system component, enabling confident optimization decisions based on quantitative metrics rather than intuition. Most importantly, it revealed that the interaction between different components (embedding models and chunking strategies) creates complex performance characteristics that require systematic measurement to understand.
+Most significantly, we discovered that embedding models exhibit fundamentally different relationships with chunking strategies: some have clear performance optima while others show scale-sensitive behavior. This insight has immediate practical implications for production RAG systems, where the choice of embedding model should drive chunking strategy rather than these components being selected independently.
 
-The complete codebase, results, and visualizations provide a template for applying similar benchmarking approaches to other domains and datasets.
+The methodology successfully adapted Chroma's generative benchmarking workflow to reveal domain-specific insights that would be impossible to discover through intuition or standard benchmarks alone. For practitioners building RAG systems, this work provides both a reusable evaluation framework and concrete evidence that comprehensive testing prevents costly deployment mistakes.
+
+The surprising result that a "general purpose" model significantly outperformed a "QA-specialized" model serves as a powerful reminder that marketing claims and theoretical advantages must be validated through rigorous empirical testing on actual use cases and data. In the rapidly evolving landscape of embedding models and RAG architectures, systematic benchmarking provides the foundation for confident, data-driven decision making.
